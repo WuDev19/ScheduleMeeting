@@ -1,1 +1,0 @@
-ALTER TABLE users ADD public_url_id VARCHAR(50)

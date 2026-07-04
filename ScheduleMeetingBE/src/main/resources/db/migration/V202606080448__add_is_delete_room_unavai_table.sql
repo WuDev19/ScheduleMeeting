@@ -1,1 +1,0 @@
-ALTER TABLE room_unavailability ADD is_deleted BOOLEAN DEFAULT FALSE NOT NULL

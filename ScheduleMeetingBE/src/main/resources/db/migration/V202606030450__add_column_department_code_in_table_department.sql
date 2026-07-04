@@ -1,1 +1,0 @@
-ALTER TABLE departments ADD department_code VARCHAR(20) NOT NULL UNIQUE

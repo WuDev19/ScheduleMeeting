@@ -29,19 +29,13 @@ import com.example.schedulemeetingbe.repository.specification.BookingSpecificati
 import com.example.schedulemeetingbe.service.base.*;
 import com.example.schedulemeetingbe.utils.TimeUtils;
 import lombok.RequiredArgsConstructor;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -71,6 +65,7 @@ public class BookingServiceImpl implements IBookingService {
     private final IRoomService iRoomService;
     private final IEquipmentService iEquipmentService;
     private final INotificationService iNotificationService;
+    private final IExcelService iExcelService;
 
     private final JsonMapper jsonMapper;
     private final BookingRollbackCommandFactory rollbackFactory;
@@ -100,7 +95,9 @@ public class BookingServiceImpl implements IBookingService {
         User user = iUserService.getDetail(userId).orElseThrow(() ->
                 new BusinessException(ErrorResponse.RESOURCE_NOT_FOUND));
 
-        //kiểm tra phòng họp có thật sự tồn tại ko
+        // Lock room theo ngày bằng Advisory Lock
+        iRoomService.acquireAdvisoryLockForRoomAndDate(request.roomId(), request.start());
+
         Room room = iRoomService.getRoomDetail(request.roomId()).orElseThrow(() ->
                 new BusinessException(ErrorResponse.RESOURCE_NOT_FOUND));
         //kiểm tra sức chứa của phòng hiện tại
@@ -121,9 +118,9 @@ public class BookingServiceImpl implements IBookingService {
                 .room(room)
                 .build();
         Booking saved = bookingRepository.save(booking);
-
+        System.out.println("Vượt qua được và chạy xuống đây");
         // người dùng đặt lịch và có chọn thêm thiết bị khi đặt lịch
-        addEquipmentToRoom(request, saved);
+        addEquipmentToBooking(request, saved);
 
         CreateBookingPayload payload = CreatePayloadHelper.create(
                 booking,
@@ -196,6 +193,14 @@ public class BookingServiceImpl implements IBookingService {
         boolean isChangeRoom = false;
         boolean isChangeTime = false;
         if (request.newRoomId() != null || (request.start() != null && request.end() != null)) {
+            //lock theo từng trường hợp
+            if (request.newRoomId() != null && request.start() == null) { //khóa phòng mới và thời gian cũ
+                iRoomService.acquireAdvisoryLockForRoomAndDate(request.newRoomId(), booking.getStartTime());
+            } else if (request.newRoomId() == null) { //khóa phòng cũ và thời gian mới
+                iRoomService.acquireAdvisoryLockForRoomAndDate(request.roomId(), request.start());
+            } else { //khóa cả phòng mới và thời gian mới
+                iRoomService.acquireAdvisoryLockForRoomAndDate(request.newRoomId(), request.start());
+            }
             BookingReservation bookingReservation = bookingReservationRepository
                     .findBookingReservationsByBooking_BookingId(bookingId)
                     .orElseGet(() -> {
@@ -216,6 +221,7 @@ public class BookingServiceImpl implements IBookingService {
                 if (request.attendeeCount() != null && request.attendeeCount() > newRoom.getCapacity()) {
                     throw new BusinessException(ErrorResponse.EXCEED_ATTENDEE);
                 }
+                checkOverlap(bookingId, request.newRoomId(), booking.getStartTime(), booking.getEndTime(), false);
                 booking.setRoom(newRoom);
                 booking.setStatus(BookingStatus.PENDING);
             }
@@ -259,12 +265,17 @@ public class BookingServiceImpl implements IBookingService {
 
         BookingHistory bookingHistory = BookingHistory.builder()
                 .booking(booking)
-                .actionType(BookingActionType.UPDATED)
+                .actionType(
+                        (!isChangeRoom && !isChangeTime) ?
+                                BookingActionType.UPDATE_NORMAL :
+                                BookingActionType.UPDATED
+                )
                 .changedBy(userChange)
                 .oldData(jsonMapper.valueToTree(oldPayload))
                 .newData(jsonMapper.valueToTree(newPayload))
                 .build();
         bookingHistoryRepository.save(bookingHistory);
+
         return Map.of(BOOKING_ID, bookingId);
     }
 
@@ -284,6 +295,16 @@ public class BookingServiceImpl implements IBookingService {
             else
                 deleteBookingEquipment.add(updateEquipmentBookingRequest);
         });
+        // đặt lock ở đây
+        iEquipmentService.lockEquipment(request.stream()
+                .map(UpdateEquipmentBookingRequest::equipmentId)
+                .sorted()
+                .toList());
+
+        if (!addBookingEquipment.isEmpty()) {
+            addEquipmentToBooking(addBookingEquipment, booking);
+        }
+
         if (!deleteBookingEquipment.isEmpty()) {
             bookingEquipmentRepository
                     .deleteBookingEquipmentsByEquipment_EquipmentIdInAndBooking_BookingId(
@@ -293,9 +314,6 @@ public class BookingServiceImpl implements IBookingService {
                                     .toList(),
                             bookingId
                     );
-        }
-        if (!addBookingEquipment.isEmpty()) {
-            addEquipmentToRoom(addBookingEquipment, booking);
         }
         booking.setStatus(BookingStatus.PENDING);
 
@@ -721,54 +739,7 @@ public class BookingServiceImpl implements IBookingService {
         } else {
             bookings = bookingRepository.findAllBookingsForApproverExport();
         }
-        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            Sheet sheet = workbook.createSheet("Bookings");
-            Row header = sheet.createRow(0);
-            String[] headings = {
-                    "Booking ID",
-                    "Title",
-                    "Description",
-                    "Room Name",
-                    "Building Address",
-                    "Floor Number",
-                    "Booked By",
-                    "Booked Email",
-                    "Booked Phone",
-                    "Status",
-                    "Start Time",
-                    "End Time",
-                    "Attendee Count"
-            };
-            for (int i = 0; i < headings.length; i++) {
-                Cell cell = header.createCell(i);
-                cell.setCellValue(headings[i]);
-            }
-            int rowIndex = 1;
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(StringCommon.DATE_TIME_FORMAT);
-            for (Booking booking : bookings) {
-                Row row = sheet.createRow(rowIndex++);
-                row.createCell(0).setCellValue(booking.getBookingId());
-                row.createCell(1).setCellValue(booking.getTitle() != null ? booking.getTitle() : "");
-                row.createCell(2).setCellValue(booking.getDescription() != null ? booking.getDescription() : "");
-                row.createCell(3).setCellValue(booking.getRoom().getRoomName());
-                row.createCell(4).setCellValue(booking.getRoom().getBuilding().getAddress());
-                row.createCell(5).setCellValue(booking.getRoom().getFloorNumber());
-                row.createCell(6).setCellValue(booking.getBookedBy().getFullName());
-                row.createCell(7).setCellValue(booking.getBookedBy().getEmail());
-                row.createCell(8).setCellValue(booking.getBookedBy().getPhone() != null ? booking.getBookedBy().getPhone() : "");
-                row.createCell(9).setCellValue(booking.getStatus().name());
-                row.createCell(10).setCellValue(booking.getStartTime().format(formatter));
-                row.createCell(11).setCellValue(booking.getEndTime().format(formatter));
-                row.createCell(12).setCellValue(booking.getAttendeeCount());
-            }
-            for (int i = 0; i < headings.length; i++) {
-                sheet.autoSizeColumn(i);
-            }
-            workbook.write(outputStream);
-            return outputStream.toByteArray();
-        } catch (IOException ex) {
-            throw new BusinessException(ErrorResponse.FILE_ACCESS_ERROR);
-        }
+        return iExcelService.exportBookings(bookings);
     }
 
     private OffsetDateTime parseOffsetDateTime(String dateTime) {
@@ -835,7 +806,7 @@ public class BookingServiceImpl implements IBookingService {
         return bookingRepository.getBookingReminding(bookingId);
     }
 
-    private void addEquipmentToRoom(CreateBookingRequest request, Booking saved) {
+    private void addEquipmentToBooking(CreateBookingRequest request, Booking saved) {
         List<CreateBookingEquipmentRequest> bookingEquipmentRequests = request.equipments();
         if (bookingEquipmentRequests != null && !bookingEquipmentRequests.isEmpty()) {
 
@@ -844,8 +815,7 @@ public class BookingServiceImpl implements IBookingService {
                     .map(CreateBookingEquipmentRequest::equipmentId)
                     .toList();
 
-            // đặt lock ở đây
-            iEquipmentService.lockEquipment(eqIds);
+            iEquipmentService.lockEquipment(eqIds.stream().sorted().toList());
 
             // lấy thông tin cơ bản của thiết bị và số lượng còn lại để check xem còn đủ để cho mượn ko
             // tránh n+1 query và sử dụng Map để truy cập phần tử với O(1)
@@ -896,14 +866,11 @@ public class BookingServiceImpl implements IBookingService {
         }
     }
 
-    private void addEquipmentToRoom(List<UpdateEquipmentBookingRequest> request, Booking saved) {
+    private void addEquipmentToBooking(List<UpdateEquipmentBookingRequest> request, Booking saved) {
         List<Long> eqIds = request
                 .stream()
                 .map(UpdateEquipmentBookingRequest::equipmentId)
                 .toList();
-
-        // đặt lock ở đây
-        iEquipmentService.lockEquipment(eqIds);
 
         // lấy thông tin cơ bản của thiết bị và số lượng còn lại để check xem còn đủ để cho mượn ko
         // tránh n+1 query và sử dụng Map để truy cập phần tử với O(1)

@@ -34,9 +34,9 @@ services:
       timeout: 5s
       retries: 5
 
-  schedule-meeting-app:
-    build: .
-    container_name: schedule-meeting
+  backend:
+    build: ./backend
+    container_name: schedule-meeting-be
     ports:
       - "8080:8080"
     restart: unless-stopped
@@ -61,7 +61,26 @@ services:
         condition: service_healthy
       redis-cache:
         condition: service_healthy
+    networks:
+      - schedule-meeting-network
+  
+  front-end:
+    build: ./frontend
+    container_name: schedule-meeting-fe
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    environment:
+      - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL}
+    depends_on: 
+      - backend
+    networks:
+      - schedule-meeting-network
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  schedule-meeting-network:
+    driver: bridge

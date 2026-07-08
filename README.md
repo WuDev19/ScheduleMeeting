@@ -1,3 +1,8 @@
+# Link github Backend
+https://github.com/WuDev19/ScheduleMeetingBE
+# Link github Frontend
+https://github.com/WuDev19/ScheduleMeetingFE
+
 # ScheduleMeeting - Hệ Thống Quản Lý Phòng Họp & Đăng Ký Lịch Sử Dụng
 
 ScheduleMeeting là một ứng dụng web hiện đại giúp quản lý, tối ưu hóa việc đăng ký sử dụng phòng họp và điều phối các thiết bị đi kèm trong tổ chức/doanh nghiệp. Hệ thống được xây dựng trên kiến trúc Client-Server mạnh mẽ, bảo mật cao và dễ dàng triển khai với Docker.

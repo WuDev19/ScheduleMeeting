@@ -64,41 +64,41 @@ jobs:
           REDIS_PASS: Anhvu197@
         run: ./mvnw clean test
 
-  build-and-push:
-    name: Build & Push Docker Images
-    needs: [ci-frontend, ci-backend]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  # build-and-push:
+  #   name: Build & Push Docker Images
+  #   needs: [ci-frontend, ci-backend]
+  #   if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+  #     - name: Log in to Docker Hub
+  #       uses: docker/login-action@v3
+  #       with:
+  #         username: ${{ secrets.DOCKER_USERNAME }}
+  #         password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
 
-      - name: Build and Push Backend Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/schedule-meeting-be:latest
-            ${{ secrets.DOCKER_USERNAME }}/schedule-meeting-be:${{ github.sha }}
+  #     - name: Build and Push Backend Image
+  #       uses: docker/build-push-action@v5
+  #       with:
+  #         context: ./backend
+  #         file: ./backend/Dockerfile
+  #         push: true
+  #         tags: |
+  #           ${{ secrets.DOCKER_USERNAME }}/schedule-meeting-be:latest
+  #           ${{ secrets.DOCKER_USERNAME }}/schedule-meeting-be:${{ github.sha }}
 
-      - name: Build and Push Frontend Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/schedule-meeting-fe:latest
-            ${{ secrets.DOCKER_USERNAME }}/schedule-meeting-fe:${{ github.sha }}
+  #     - name: Build and Push Frontend Image
+  #       uses: docker/build-push-action@v5
+  #       with:
+  #         context: ./frontend
+  #         file: ./frontend/Dockerfile
+  #         push: true
+  #         tags: |
+  #           ${{ secrets.DOCKER_USERNAME }}/schedule-meeting-fe:latest
+  #           ${{ secrets.DOCKER_USERNAME }}/schedule-meeting-fe:${{ github.sha }}
 

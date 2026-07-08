@@ -8,6 +8,8 @@ RUN npm run build
 
 # Giai đoạn 2: Serve file tĩnh bằng Nginx nhẹ
 FROM nginx:alpine
+# Copy file cấu hình Nginx để hỗ trợ SPA Routing (tránh lỗi 404 khi reload)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy các file đã build từ giai đoạn 1 vào thư mục chứa của Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80

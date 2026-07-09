@@ -41,8 +41,10 @@ public class DailyRecurrenceStrategy implements RecurrencePatternStrategy {
         OffsetDateTime startTime = OffsetDateTime.of(startDate, request.meetingStartTime(), TimeUtils.ZONE_OFFSET);
         OffsetDateTime endTime = OffsetDateTime.of(startDate, request.meetingEndTime(), TimeUtils.ZONE_OFFSET);
         long gapInMinutes = ChronoUnit.MINUTES.between(startTime, endTime);
+
         List<Booking> bookings = new ArrayList<>();
         List<String> rangesTime = new ArrayList<>();
+        List<OffsetDateTime> dateTimesForLock = new ArrayList<>();
         // hiện tại thì sẽ cho đặt lịch họp hôm thứ 7, chủ nhật,
         // sau tùy theo logic thì có thể chỉ cho họp trong ngày giờ hành chính
         while (!startDate.isAfter(endDate)) {
@@ -57,12 +59,13 @@ public class DailyRecurrenceStrategy implements RecurrencePatternStrategy {
                     .recurringPattern(recurringPattern)
                     .build();
             bookings.add(booking);
+            dateTimesForLock.add(startTime);
             String rangeStr = String.format("[%s, %s)", startTime, endTime);
             rangesTime.add(rangeStr);
             startDate = startDate.plusDays(interval);
             startTime = startTime.plusDays(interval);
             endTime = startTime.plusMinutes(gapInMinutes);
         }
-        RecurrenceHelper.validateAndSaveBooking(room, bookings, rangesTime, bookingRepository);
+        RecurrenceHelper.validateAndSaveBooking(request.roomId(), bookings, rangesTime, bookingRepository, iRoomService, dateTimesForLock);
     }
 }

@@ -25,8 +25,16 @@ public class RecurrenceHelper {
         return ChronoUnit.DAYS.between(start, end) >= 31;
     }
 
-    public static void validateAndSaveBooking(Room room, List<Booking> bookings, List<String> rangesTime, BookingRepository bookingRepository) {
-        List<String> reasons = bookingRepository.checkOverlap(room.getRoomId(), rangesTime.toArray(new String[0]));
+    public static void validateAndSaveBooking(
+            Long roomId,
+            List<Booking> bookings,
+            List<String> rangesTime,
+            BookingRepository bookingRepository,
+            IRoomService iRoomService,
+            List<OffsetDateTime> dateTimes
+    ) {
+        iRoomService.acquireAdvisoryLockForRoomAndDate(AdvisoryLockKeyUtils.forRoomAndDates(roomId, dateTimes));
+        List<String> reasons = bookingRepository.checkOverlap(roomId, rangesTime.toArray(new String[0]));
         if (!reasons.isEmpty()) {
             throw new OverlapBookingException(reasons);
         }

@@ -262,8 +262,13 @@ public class RoomServiceImpl implements IRoomService {
     @Override
     @Transactional
     public void acquireAdvisoryLockForRoomAndDate(Long roomId, OffsetDateTime dateTime) {
-        int dateAsInt = dateTime.getYear() * 10000 + dateTime.getMonthValue() * 100 + dateTime.getDayOfMonth();
-        long key = roomId * 100000000L + dateAsInt;
-        roomRepository.acquireAdvisoryLock(key);
+        roomRepository.acquireAdvisoryLock(AdvisoryLockKeyUtils.createKey(roomId, dateTime));
     }
+
+    @Override
+    @Transactional
+    public void acquireAdvisoryLockForRoomAndDate(long[] keys) {
+        roomRepository.advisoryLockBatch(keys);
+    }
+
 }

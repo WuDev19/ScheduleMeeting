@@ -56,6 +56,7 @@ public class WeeklyRecurrenceStrategy implements RecurrencePatternStrategy {
                 .collect(Collectors.toSet());
 
         LocalDate weekCursor = startDate.with(DayOfWeek.MONDAY);
+        List<OffsetDateTime> dateTimesForLock = new ArrayList<>();
 
         while (!weekCursor.isAfter(endDate)) {
             for (DayOfWeek day : days) {
@@ -82,13 +83,13 @@ public class WeeklyRecurrenceStrategy implements RecurrencePatternStrategy {
                         .recurringPattern(recurringPattern)
                         .build()
                 );
-
+                dateTimesForLock.add(startTime);
                 String rangeStr = String.format("[%s, %s)", startTime, endTime);
                 rangesTime.add(rangeStr);
             }
             weekCursor = weekCursor.plusWeeks(interval);
         }
-        RecurrenceHelper.validateAndSaveBooking(room, bookings, rangesTime, bookingRepository);
+        RecurrenceHelper.validateAndSaveBooking(request.roomId(), bookings, rangesTime, bookingRepository, iRoomService, dateTimesForLock);
     }
 
 }

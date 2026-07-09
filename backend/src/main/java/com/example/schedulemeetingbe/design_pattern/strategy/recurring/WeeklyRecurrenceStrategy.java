@@ -10,6 +10,7 @@ import com.example.schedulemeetingbe.exception.ErrorResponse;
 import com.example.schedulemeetingbe.exception.custom_exception.BusinessException;
 import com.example.schedulemeetingbe.helper.RecurrenceHelper;
 import com.example.schedulemeetingbe.repository.BookingRepository;
+import com.example.schedulemeetingbe.service.base.IRoomService;
 import com.example.schedulemeetingbe.utils.TimeUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class WeeklyRecurrenceStrategy implements RecurrencePatternStrategy {
     private final BookingRepository bookingRepository;
+    private final IRoomService iRoomService;
 
     @Override
     public RecurrenceType getType() {

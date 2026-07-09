@@ -22,6 +22,7 @@ import com.example.schedulemeetingbe.repository.RoomEquipmentRepository;
 import com.example.schedulemeetingbe.repository.RoomRepository;
 import com.example.schedulemeetingbe.repository.specification.RoomSpecification;
 import com.example.schedulemeetingbe.service.base.IRoomService;
+import com.example.schedulemeetingbe.utils.AdvisoryLockKeyUtils;
 import com.example.schedulemeetingbe.utils.TimeUtils;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;

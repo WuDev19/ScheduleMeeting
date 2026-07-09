@@ -45,5 +45,4 @@ public interface IRoomService {
     void acquireAdvisoryLockForRoomAndDate(Long roomId, OffsetDateTime dateTime);
 
     void acquireAdvisoryLockForRoomAndDate(long[] keys);
-
 }

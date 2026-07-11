@@ -1,0 +1,13 @@
+{
+  "name": "schedule-meeting-race-test",
+  "version": "1.0.0",
+  "description": "Playwright script to test race conditions in ScheduleMeeting room bookings",
+  "main": "race-test.js",
+  "type": "commonjs",
+  "scripts": {
+    "test:race": "node race-test.js"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}

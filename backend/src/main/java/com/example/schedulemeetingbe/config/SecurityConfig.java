@@ -75,7 +75,6 @@ public class SecurityConfig {
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
 
-        // Sử dụng OriginPatterns để hỗ trợ các cổng localhost khác nhau và ngrok
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:*",
                 "http://127.0.0.1:*",
@@ -85,7 +84,6 @@ public class SecurityConfig {
                 "https://meeting-frontend.vercel.app"
         ));
 
-        // Bổ sung thêm phương thức "PATCH"
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

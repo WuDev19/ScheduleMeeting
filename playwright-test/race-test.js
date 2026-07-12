@@ -9,7 +9,7 @@ const accounts = [
   { username: 'wenwu', password: 'Aa123456@', pos: { x: 0, y: 0 } },
   { username: 'kduy', password: 'Aa123456@', pos: { x: 120, y: 60 } },
   { username: 'vantoi', password: 'Aa123456@', pos: { x: 240, y: 120 } },
-  { username: 'wuw', password: 'Aa123456@', pos: { x: 360, y: 180 } }
+  { username: 'user1', password: 'Aa123456@', pos: { x: 360, y: 180 } }
 ];
 
 async function run() {

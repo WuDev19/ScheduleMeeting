@@ -16,9 +16,6 @@ import java.time.OffsetDateTime;
 
 public interface RoomRepository extends JpaRepository<Room, Long>, JpaSpecificationExecutor<Room> {
 
-    @Query(value = "SELECT pg_advisory_xact_lock(:key)", nativeQuery = true)
-    void acquireAdvisoryLock(@Param("key") long key);
-
     Page<Room> findByIsActiveIsTrue(Pageable pageable);
 
     Page<Room> findByRoomNameContainingIgnoreCase(String keyword, Pageable pageable);
